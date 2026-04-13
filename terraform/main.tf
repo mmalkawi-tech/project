@@ -108,10 +108,11 @@ module "storage_primary" {
 
   providers = { aws = aws.primary }
 
-  project_name        = var.project_name
-  environment         = var.environment
-  region              = var.primary_region
-  replication_role_arn = aws_iam_role.s3_replication.arn
+  project_name           = var.project_name
+  environment            = var.environment
+  region                 = var.primary_region
+  enable_replication     = true
+  replication_role_arn   = aws_iam_role.s3_replication.arn
   destination_bucket_arn = module.storage_dr.bucket_arn
 }
 
@@ -124,6 +125,7 @@ module "storage_dr" {
   project_name           = var.project_name
   environment            = "${var.environment}-dr"
   region                 = var.dr_region
+  enable_replication     = false
   replication_role_arn   = null
   destination_bucket_arn = null
 }
@@ -230,7 +232,10 @@ resource "aws_iam_role_policy_attachment" "backup" {
 }
 
 # ---------- Route53 Health Check & DNS Failover ----------
+# Set create_dns_records = true in terraform.tfvars once the hosted zone exists.
 resource "aws_route53_health_check" "primary" {
+  count = var.create_dns_records ? 1 : 0
+
   provider          = aws.primary
   fqdn              = module.compute_primary.alb_dns_name
   port              = 443
@@ -243,9 +248,11 @@ resource "aws_route53_health_check" "primary" {
 }
 
 resource "aws_route53_record" "primary" {
+  count = var.create_dns_records ? 1 : 0
+
   provider = aws.primary
-  zone_id  = data.aws_route53_zone.main.zone_id
-  name     = "app.techconsulting.tech"
+  zone_id  = data.aws_route53_zone.main[0].zone_id
+  name     = "app.${var.domain_name}"
   type     = "A"
 
   set_identifier = "primary"
@@ -254,7 +261,7 @@ resource "aws_route53_record" "primary" {
     type = "PRIMARY"
   }
 
-  health_check_id = aws_route53_health_check.primary.id
+  health_check_id = aws_route53_health_check.primary[0].id
 
   alias {
     name                   = module.compute_primary.alb_dns_name
@@ -264,9 +271,11 @@ resource "aws_route53_record" "primary" {
 }
 
 resource "aws_route53_record" "dr" {
+  count = var.create_dns_records ? 1 : 0
+
   provider = aws.primary
-  zone_id  = data.aws_route53_zone.main.zone_id
-  name     = "app.techconsulting.tech"
+  zone_id  = data.aws_route53_zone.main[0].zone_id
+  name     = "app.${var.domain_name}"
   type     = "A"
 
   set_identifier = "dr-failover"
@@ -283,8 +292,9 @@ resource "aws_route53_record" "dr" {
 }
 
 data "aws_route53_zone" "main" {
+  count    = var.create_dns_records ? 1 : 0
   provider = aws.primary
-  name     = "techconsulting.tech"
+  name     = var.domain_name
 }
 
 # ---------- SNS: DR Alerts ----------

@@ -105,3 +105,15 @@ variable "alert_email" {
   type        = string
   default     = "moath.malkawi@techconsulting.tech"
 }
+
+variable "domain_name" {
+  description = "Route53 hosted zone domain name (e.g. techconsulting.tech)"
+  type        = string
+  default     = "techconsulting.tech"
+}
+
+variable "create_dns_records" {
+  description = "Set to true only after the Route53 hosted zone exists in your account"
+  type        = bool
+  default     = false
+}

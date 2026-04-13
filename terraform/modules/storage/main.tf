@@ -45,7 +45,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
 }
 
 resource "aws_s3_bucket_replication_configuration" "main" {
-  count = var.replication_role_arn != null ? 1 : 0
+  count = var.enable_replication ? 1 : 0
 
   bucket = aws_s3_bucket.main.id
   role   = var.replication_role_arn

@@ -32,7 +32,7 @@ output "dr_s3_bucket" {
 
 output "route53_health_check_id" {
   description = "Route53 health check ID monitoring primary endpoint"
-  value       = aws_route53_health_check.primary.id
+  value       = var.create_dns_records ? aws_route53_health_check.primary[0].id : null
 }
 
 output "sns_alert_topic_arn" {
