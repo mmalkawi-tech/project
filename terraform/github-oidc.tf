@@ -20,7 +20,7 @@ data "aws_iam_role" "github_actions" {
 resource "aws_iam_role_policy" "github_actions_state" {
   provider = aws.primary
   name     = "terraform-state-access"
-  role     = data.aws_iam_role.github_actions.role_name
+  role     = data.aws_iam_role.github_actions.name
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -54,7 +54,7 @@ resource "aws_iam_role_policy" "github_actions_state" {
 resource "aws_iam_role_policy" "github_actions_dr" {
   provider = aws.primary
   name     = "dr-infrastructure-access"
-  role     = data.aws_iam_role.github_actions.role_name
+  role     = data.aws_iam_role.github_actions.name
 
   policy = jsonencode({
     Version = "2012-10-17"
