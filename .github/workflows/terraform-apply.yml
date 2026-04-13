@@ -35,6 +35,17 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.DB_USERNAME }}" ]; then
+            echo "::error::DB_USERNAME secret is not set. Go to Settings → Secrets → Actions and add it."
+            exit 1
+          fi
+          if [ -z "${{ secrets.DB_PASSWORD }}" ]; then
+            echo "::error::DB_PASSWORD secret is not set. Go to Settings → Secrets → Actions and add it."
+            exit 1
+          fi
+
       - name: Terraform Init
         run: terraform init
         working-directory: terraform
