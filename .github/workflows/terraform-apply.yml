@@ -1,0 +1,58 @@
+name: Terraform Apply
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: "1.7.5"
+
+jobs:
+  terraform-apply:
+    name: Apply Infrastructure Changes
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::866934333672:role/github-actions-dr-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform
+
+      - name: Terraform Apply
+        run: |
+          terraform apply -auto-approve \
+            -var="db_username=${{ secrets.DB_USERNAME }}" \
+            -var="db_password=${{ secrets.DB_PASSWORD }}"
+        working-directory: terraform
+
+      - name: Notify on Success
+        if: success()
+        run: |
+          echo "Terraform apply succeeded — DR infrastructure is up to date"
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "::error::Terraform apply FAILED — review logs immediately"
+          exit 1
