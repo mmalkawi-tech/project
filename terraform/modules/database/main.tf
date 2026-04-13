@@ -1,3 +1,21 @@
+resource "aws_iam_role" "rds_monitoring" {
+  name = "${var.project_name}-rds-monitoring-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "monitoring.rds.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "rds_monitoring" {
+  role       = aws_iam_role.rds_monitoring.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"
+}
+
 resource "aws_security_group" "db" {
   name        = "${var.project_name}-db-sg-${var.environment}"
   description = "Allow MySQL from app layer"
@@ -51,6 +69,7 @@ resource "aws_db_instance" "main" {
 
   performance_insights_enabled = true
   monitoring_interval          = 60
+  monitoring_role_arn          = aws_iam_role.rds_monitoring.arn
 
   tags = { Name = "${var.project_name}-db-${var.environment}" }
 }
