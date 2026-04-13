@@ -4,51 +4,23 @@
 # the github-actions-dr-role without any long-lived access keys.
 # =============================================================================
 
-# GitHub's OIDC provider (created once per AWS account)
-resource "aws_iam_openid_connect_provider" "github" {
+# GitHub's OIDC provider — already created by bootstrap.sh, read-only here
+data "aws_iam_openid_connect_provider" "github" {
   provider = aws.primary
   url      = "https://token.actions.githubusercontent.com"
-
-  client_id_list = ["sts.amazonaws.com"]
-
-  # GitHub's OIDC thumbprint (stable — verified against their cert chain)
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
 }
 
-# IAM Role assumed by GitHub Actions
-resource "aws_iam_role" "github_actions" {
+# IAM Role — already created by bootstrap.sh, read-only here
+data "aws_iam_role" "github_actions" {
   provider = aws.primary
   name     = "github-actions-dr-role"
-  description = "Assumed by GitHub Actions in mmalkawi-tech/project via OIDC"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Federated = aws_iam_openid_connect_provider.github.arn
-        }
-        Action = "sts:AssumeRoleWithWebIdentity"
-        Condition = {
-          StringEquals = {
-            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          }
-          StringLike = {
-            # Only workflows from this specific repo can assume this role
-            "token.actions.githubusercontent.com:sub" = "repo:mmalkawi-tech/project:*"
-          }
-        }
-      }
-    ]
-  })
 }
 
 # Policy: Terraform state backend access
 resource "aws_iam_role_policy" "github_actions_state" {
   provider = aws.primary
   name     = "terraform-state-access"
-  role     = aws_iam_role.github_actions.id
+  role     = data.aws_iam_role.github_actions.role_name
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -82,7 +54,7 @@ resource "aws_iam_role_policy" "github_actions_state" {
 resource "aws_iam_role_policy" "github_actions_dr" {
   provider = aws.primary
   name     = "dr-infrastructure-access"
-  role     = aws_iam_role.github_actions.id
+  role     = data.aws_iam_role.github_actions.role_name
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -154,6 +126,6 @@ resource "aws_iam_role_policy" "github_actions_dr" {
 }
 
 output "github_actions_role_arn" {
-  description = "ARN to paste into GitHub Actions workflow role-to-assume"
-  value       = aws_iam_role.github_actions.arn
+  description = "ARN of the GitHub Actions IAM role"
+  value       = data.aws_iam_role.github_actions.arn
 }
